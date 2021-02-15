@@ -1,5 +1,6 @@
 from django.shortcuts import render
-from .forms import SignupForm
+from django.contrib.auth.decorators import login_required
+from .forms import LoginForm, UserForm, ProfileForm
 
 def home_page(request):
     """Render home page and display Login link"""
@@ -8,36 +9,26 @@ def home_page(request):
 
 
 def signup_page(request):
-    """Render sign up form page."""
+    """Render sign up form page """
 
-    if request.user.is_authenticated:
-        return redirect(reverse('login_success'))
-
-    if request.method == "POST":
-        signup_form = SignupForm(request.POST)
-
-        if signup_form.is_valid():
-            signup_form.save()
-
-            user = auth.authenticate(username=request.POST['username'],
-                                     password=request.POST['password1'])
-
-            if user:
-                auth.login(user=user, request=request)
-                messages.success(request, "Your account has been created")
-
-                return redirect(reverse('login_success'))
-            else:
-                messages.warning(
-                    request, "We were unable to register your account")
+    if request.method == 'POST':
+        user_form = UserForm(request.POST, instance=request.user)
+        profile_form = ProfileForm(request.POST, instance=request.user.profile)
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, _('Your profile was successfully updated!'))
+            # return redirect('settings:profile')
         else:
-            messages.warning(request, "Please correct the error(s) below")
-
+            messages.error(request, _('Please correct the error below.'))
     else:
-        signup_form = SignupForm()
+        user_form = UserForm()
+        profile_form = ProfileForm()
 
     context = {
         "page_title": "Sign Up",
-        "form": signup_form
+        'user_form': user_form,
+        'profile_form': profile_form
     }
+
     return render(request, 'signup.html', context)
